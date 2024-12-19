@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="w-1/5 bg-white text-white min-h-screen p-5">
+            <div class="text-center mb-10">
+                <img src="../assets/logo.png" alt="Logo" width="200" height="300">
+            </div>
+            <nav>
+                <ul>
+                    <li class="mb-3"><a href="#" class="flex items-center gap-2 text-black hover:bg-green-500"><span class="fa fa-th-large"></span> Dashboard </a></li>
+                    <li class="mb-3"><a href="#" class="flex items-center gap-2 text-black hover:bg-green-500"><span class="fa fa-credit-card"></span> Transaction </a></li>
+                    <li class="mb-3"><a href="#" class="flex items-center gap-2 text-black hover:bg-green-500 font-bold"><span class="fa fa-shopping-cart"></span> Products </a></li>
+                    <li class="mb-3"><a href="#" class="flex items-center gap-2 text-black hover:bg-green-500"><span class="fa fa-clock"></span> History </a></li>
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="w-4/5 p-5">
+            <div class="flex justify-between items-center mb-5">
+                <h1 class="text-2xl font-bold">Your Products</h1>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="searchInput" placeholder="Search products with code or name" 
+                           class="border border-gray-300 rounded-lg px-4 py-2 w-64">
+                    <button id="filterBtn" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Filter</button>
+                    <!-- <button id="deleteBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">Delete</button>
+                    <button id="addProductBtn" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">+ Product</button> -->
+                </div>
+            </div>
+
+            <table class="w-full bg-white shadow-md rounded-lg">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="p-3 text-left">Products</th>
+                        <th class="p-3 text-left">Code</th>
+                        <th class="p-3 text-left">Category</th>
+                        <th class="p-3 text-left">Stock</th>
+                        <th class="p-3 text-left">Price</th>
+                        <th class="p-3 text-left">Created</th>
+                        <th class="p-3 text-left">Updated</th>
+                        <th class="p-3 text-left">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="productTable" class="divide-y divide-gray-200">
+                    <!-- Dynamic rows will be rendered here -->
+                </tbody>
+            </table>
+
+            <div id="pagination" class="flex justify-center mt-5">
+                <!-- Pagination buttons will be dynamically generated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let products = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+
+        document.getElementById('addProductBtn').addEventListener('click', () => {
+            Swal.fire({
+                title: 'Add Product',
+                html: `<input id="name" class="swal2-input" placeholder="Name">
+                       <input id="code" class="swal2-input" placeholder="Code">
+                       <input id="category" class="swal2-input" placeholder="Category">
+                       <input id="stock" type="number" class="swal2-input" placeholder="Stock">
+                       <input id="price" type="number" class="swal2-input" placeholder="Price">`,
+                showCancelButton: true,
+                confirmButtonText: 'Add',
+                preConfirm: () => {
+                    const name = document.getElementById('name').value;
+                    const code = document.getElementById('code').value;
+                    const category = document.getElementById('category').value;
+                    const stock = document.getElementById('stock').value;
+                    const price = document.getElementById('price').value;
+
+                    if (!name || !code || !category || !stock || !price) {
+                        Swal.showValidationMessage('Please fill out all fields');
+                    } else {
+                        return { name, code, category, stock, price };
+                    }
+                }
+            }).then(result => {
+                if (result.isConfirmed) {
+                    products.push({
+                        id: products.length + 1,
+                        created: new Date().toLocaleDateString(),
+                        updated: new Date().toLocaleDateString(),
+                        ...result.value
+                    });
+                    renderTable();
+                    Swal.fire('Added!', 'Your product has been added.', 'success');
+                }
+            });
+        });
+
+        function renderTable() {
+            const tableBody = document.getElementById('productTable');
+            tableBody.innerHTML = '';
+
+            const filteredProducts = products.filter(product => {
+                const search = document.getElementById('searchInput').value.toLowerCase();
+                return product.name.toLowerCase().includes(search) || product.code.toLowerCase().includes(search);
+            });
+
+            const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+            paginatedProducts.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="p-3">${product.name}</td>
+                    <td class="p-3">${product.code}</td>
+                    <td class="p-3">${product.category}</td>
+                    <td class="p-3">${product.stock}</td>
+                    <td class="p-3">Rp. ${product.price}</td>
+                    <td class="p-3">${product.created}</td>
+                    <td class="p-3">${product.updated}</td>
+                    <td class="p-3">
+                        <button class="bg-green-500 text-white px-3 py-1 rounded mr-2" onclick="editProduct(${product.id})">Edit</button>
+                        <button class="bg-red-500 text-white px-3 py-1 rounded" onclick="deleteProduct(${product.id})">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            renderPagination(filteredProducts.length);
+        }
+
+        function renderPagination(totalItems) {
+            const paginationDiv = document.getElementById('pagination');
+            paginationDiv.innerHTML = '';
+
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+            for (let i = 1; i <= totalPages; i++) {
+                const button = document.createElement('button');
+                button.textContent = i;
+                button.className = `mx-1 px-4 py-2 border rounded ${i === currentPage ? 'bg-blue-500 text-white' : 'bg-white'}`;
+                button.addEventListener('click', () => {
+                    currentPage = i;
+                    renderTable();
+                });
+                paginationDiv.appendChild(button);
+            }
+        }
+
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+
+            Swal.fire({
+                title: 'Edit Product',
+                html: `<input id="name" class="swal2-input" value="${product.name}" placeholder="Name">
+                       <input id="code" class="swal2-input" value="${product.code}" placeholder="Code">
+                       <input id="category" class="swal2-input" value="${product.category}" placeholder="Category">
+                       <input id="stock" type="number" class="swal2-input" value="${product.stock}" placeholder="Stock">
+                       <input id="price" type="number" class="swal2-input" value="${product.price}" placeholder="Price">`,
+                showCancelButton: true,
+                confirmButtonText: 'Save',
+                preConfirm: () => {
+                    const name = document.getElementById('name').value;
+                    const code = document.getElementById('code').value;
+                    const category = document.getElementById('category').value;
+                    const stock = document.getElementById('stock').value;
+                    const price = document.getElementById('price').value;
+
+                    if (!name || !code || !category || !stock || !price) {
+                        Swal.showValidationMessage('Please fill out all fields');
+                    } else {
+                        return { name, code, category, stock, price };
+                    }
+                }
+            }).then(result => {
+                if (result.isConfirmed) {
+                    Object.assign(product, { ...result.value, updated: new Date().toLocaleDateString() });
+                    renderTable();
+                    Swal.fire('Updated!', 'Your product has been updated.', 'success');
+                }
+            });
+        }
+
+        function deleteProduct(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'You won\'t be able to revert this!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete it!'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    products = products.filter(product => product.id !== id);
+                    renderTable();
+                    Swal.fire('Deleted!', 'Your product has been deleted.', 'success');
+                }
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderTable);
+
+        // Initial render
+        renderTable();
+    </script>
+</body>
+</html>
